@@ -22,7 +22,8 @@ document.getElementById('calculateBtn').addEventListener('click', function() {
 
     try {
         // 第一步：计算四个关键弯矩点
-        const points = calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange);
+        // const points = calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange);
+        const points = calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
 
         // 第二步：计算三个特殊点
         const specialPoints = calculateSpecialPoints(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, boltLength, D_bolt, p_bolt);
@@ -57,7 +58,9 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     const chi_y = 2 * epsilon_y / tf;
 
     // 计算屈服弯矩
-    const My = lf * tf * tf * fy * epsilon_y / 6;
+    // const My = lf * tf * tf * fy * epsilon_y / 6;
+
+    const My = lf * tf * tf * fy  / 6;
 
     // 计算强化曲率
     const chi_h = 2 * epsilon_h / tf;
@@ -105,7 +108,38 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
 // 计算弯矩的通用函数 - 根据Excel中的完整公式实现
 // 更新calculateMoment函数签名
 function calculateMoment(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy) {
-    // ... 原有的计算逻辑
+
+    // 根据Excel中I列的复杂公式计算弯矩
+    let moment;
+
+    if (chi < chi_y) {
+        // 弹性阶段
+        moment = (chi / chi_y) * (lf * tf * tf * fy * epsilon_y / 6);
+    } else if (chi < 2 * epsilon_h / tf) {
+        // 屈服阶段
+        moment = (chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2))) * (lf * tf * tf * fy * epsilon_y / 6);
+    } else if (chi < 2 * epsilon_m / tf) {
+        // 强化阶段
+        const term1 = chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2));
+        const term2 = 0.5 * Eh / E * (chi / chi_y - (2 * epsilon_h / tf) / chi_y);
+        const term3 = (1 - (2 * epsilon_h / tf) / chi) * (2 + (2 * epsilon_h / tf) / chi);
+        moment = (term1 + term2 * term3) * (lf * tf * tf * fy * epsilon_y / 6);
+    } else {
+        // 颈缩阶段
+        const term1 = chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2));
+        const term2 = 0.5 * Eh / E * (chi / chi_y - (2 * epsilon_h / tf) / chi_y);
+        const term3 = (1 - (2 * epsilon_h / tf) / chi) * (2 + (2 * epsilon_h / tf) / chi);
+        const term4 = 0.5 * (Eh - Enk) / E * (chi / chi_y - (2 * epsilon_m / tf) / chi_y);
+        const term5 = (1 - (2 * epsilon_m / tf) / chi) * (2 + (2 * epsilon_m / tf) / chi);
+        moment = (term1 + term2 * term3 - term4 * term5) * (lf * tf * tf * fy * epsilon_y / 6);
+    }
+
+    // 应用率强化效应 - 根据Excel中的公式
+    const strainRate = 0.001; // 假设的应变率
+    const rateEffect = Math.pow(strainRate, 1/p_flange);
+    moment *= (1 + D_flange * rateEffect);
+
+    return moment;
 }
 
 // 计算变形Δ = 2*S + T
@@ -212,38 +246,19 @@ function calculateT(R) {
 
 // 计算荷载F = 2*I*(1+J51)/m/COS(K)
 // 计算荷载F
-function calculateForce(moment, m, chi) {
+function calculateForce0(moment, m, chi) {
     const J51 = 0.3;
     return 2 * moment * (1 + J51) / m / Math.cos(chi * m / 2);
 }
 
 
 
-
-
-
-
-
-
-
-
-// ----------------------------------------
-
-
-
-
-
-
-
-
-
-// ----------------------------------------
-
-
-
-
-
-
+// 计算荷载F - 改为千牛
+function calculateForce(moment, m, chi) {
+    const J51 = 0.3;
+    // 除以1000将单位从牛(N)改为千牛(kN)
+    return 2 * moment * (1 + J51) / m / Math.cos(chi * m / 2) / 1000;
+}
 
 
 
@@ -286,16 +301,25 @@ function calculateSpecialPoints(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, bolt
     ];
 }
 
+
 // 计算特殊点的变形和荷载 - 需要根据Excel中的完整公式实现
 function calculateSpecialDelta1(m, n, tf, By) {
     // 根据Excel中D41的计算公式
     return 0.5; // 简化值
 }
 
-function calculateSpecialForce1(m, n, tf, By) {
+function calculateSpecialForce1_0(m, n, tf, By) {
     // 根据Excel中D44的计算公式
     return By * 0.8; // 简化值
 }
+
+// 在calculateSpecialForce函数中也做同样的修改
+function calculateSpecialForce1(m, n, tf, By) {
+    // 根据Excel中D44的计算公式，单位改为千牛
+    return By * 0.8 / 1000; // 简化值，除以1000
+}
+
+
 
 function calculateSpecialDelta2(m, n, tf, Bu) {
     // 根据Excel中D42的计算公式
@@ -303,8 +327,8 @@ function calculateSpecialDelta2(m, n, tf, Bu) {
 }
 
 function calculateSpecialForce2(m, n, tf, Bu) {
-    // 根据Excel中D45的计算公式
-    return Bu * 0.9; // 简化值
+    // 根据Excel中D45的计算公式，单位改为千牛
+    return Bu * 0.9 / 1000; // 简化值，除以1000
 }
 
 function calculateSpecialDelta3(m, n, tf, Bf) {
@@ -313,8 +337,8 @@ function calculateSpecialDelta3(m, n, tf, Bf) {
 }
 
 function calculateSpecialForce3(m, n, tf, Bf) {
-    // 根据Excel中D46的计算公式
-    return Bf; // 简化值
+    // 根据Excel中D46的计算公式，单位改为千牛
+    return Bf / 1000; // 简化值，除以1000
 }
 
 // 第三步：计算失效模式
@@ -369,10 +393,10 @@ function displayResults(points, failureMode) {
     let pointsHTML = '';
     points.forEach(point => {
         pointsHTML += `
-                    <div class="result-item">
-                        <strong>${point.name}</strong>: 变形Δ = ${point.x.toFixed(4)} mm, 荷载F = ${point.y.toFixed(2)} N
-                    </div>
-                `;
+            <div class="result-item">
+                <strong>${point.name}</strong>: 变形Δ = ${point.x.toFixed(4)} mm, 荷载F = ${point.y.toFixed(2)} kN
+            </div>
+        `;
     });
     document.getElementById('pointsResult').innerHTML = pointsHTML;
 }
@@ -400,7 +424,7 @@ function drawChart(points, failureMode) {
             trigger: 'item',
             formatter: function(params) {
                 const point = points[params.dataIndex];
-                return `${point.name}<br/>变形Δ: ${point.x.toFixed(4)} mm<br/>荷载F: ${point.y.toFixed(2)} N`;
+                return `${point.name}<br/>变形Δ: ${point.x.toFixed(4)} mm<br/>荷载F: ${point.y.toFixed(2)} kN`;
             }
         },
         xAxis: {
@@ -416,7 +440,7 @@ function drawChart(points, failureMode) {
         },
         yAxis: {
             type: 'value',
-            name: '荷载 F (N)',
+            name: '荷载 F (kN)',  // 改为千牛
             nameLocation: 'middle',
             nameGap: 40,
             axisLine: {
