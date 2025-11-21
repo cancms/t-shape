@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>T形件全过程曲线计算器</title>
-    <!--<script // src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>-->
     <script src="https://fastly.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
@@ -31,19 +30,19 @@
         }
 
         header {
-            background: linear-gradient(135deg, #1e5799 0%, #207cca 100%);
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
             color: white;
-            padding: 20px 30px;
+            padding: 25px 30px;
             text-align: center;
         }
 
         h1 {
-            font-size: 24px;
+            font-size: 28px;
             margin-bottom: 10px;
         }
 
         .description {
-            font-size: 14px;
+            font-size: 16px;
             opacity: 0.9;
             max-width: 800px;
             margin: 0 auto;
@@ -57,14 +56,14 @@
 
         .input-section {
             flex: 1;
-            min-width: 300px;
+            min-width: 350px;
             padding: 20px;
             border-right: 1px solid #eee;
         }
 
-        .chart-section {
+        .output-section {
             flex: 2;
-            min-width: 500px;
+            min-width: 600px;
             padding: 20px;
         }
 
@@ -75,74 +74,43 @@
         label {
             display: block;
             margin-bottom: 5px;
-            font-weight: 500;
-            color: #555;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
         }
 
-        input, select {
+        input[type="number"] {
             width: 100%;
-            padding: 10px;
+            padding: 10px 12px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 5px;
             font-size: 14px;
             transition: border 0.3s;
         }
 
-        input:focus, select:focus {
+        input[type="number"]:focus {
             border-color: #3498db;
             outline: none;
-            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
-        .input-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .input-row .form-group {
-            flex: 1;
-        }
-
-        .section-title {
-            font-size: 18px;
-            margin: 20px 0 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #3498db;
-            color: #2c3e50;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-calculate {
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
             background: #3498db;
             color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
         }
 
-        .btn-calculate:hover {
+        .btn:hover {
             background: #2980b9;
-        }
-
-        .btn-reset {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background: #c0392b;
         }
 
         .chart-container {
@@ -156,40 +124,40 @@
             padding: 15px;
             background: #f8f9fa;
             border-radius: 5px;
-            border-left: 4px solid #3498db;
-        }
-
-        .results h3 {
-            margin-bottom: 10px;
-            color: #2c3e50;
         }
 
         .result-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed #ddd;
-        }
-
-        .result-label {
-            font-weight: 500;
-        }
-
-        .result-value {
-            font-weight: 600;
-            color: #3498db;
-        }
-
-        footer {
-            text-align: center;
-            padding: 15px;
-            color: #7f8c8d;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             font-size: 14px;
-            border-top: 1px solid #eee;
         }
 
-        @media (max-width: 900px) {
+        .failure-mode {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+
+        .failure-mode h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-row .form-group {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
             .content {
                 flex-direction: column;
             }
@@ -198,6 +166,11 @@
                 border-right: none;
                 border-bottom: 1px solid #eee;
             }
+
+            .input-row {
+                flex-direction: column;
+                gap: 0;
+            }
         }
     </style>
 </head>
@@ -205,639 +178,145 @@
 <div class="container">
     <header>
         <h1>T形件全过程曲线计算器</h1>
-        <p class="description"> 输入参数后实时计算并可视化四条曲线：M8P6准静态、引入位移协调条件、原来的预测、ABF计算公式</p>
     </header>
 
     <div class="content">
         <div class="input-section">
-            <h2 class="section-title">翼缘参数</h2>
+            <h2>输入参数</h2>
+
             <div class="input-row">
                 <div class="form-group">
                     <label for="m">m (mm)</label>
-                    <input type="number" id="m" value="42.2" step="0.1">
+                    <input type="number" id="m" step="0.1" value="42.2">
                 </div>
+
                 <div class="form-group">
                     <label for="n">n (mm)</label>
-                    <input type="number" id="n" value="40" step="0.1">
+                    <input type="number" id="n" step="0.1" value="40">
                 </div>
             </div>
 
             <div class="input-row">
                 <div class="form-group">
                     <label for="tf">翼缘厚度 tf (mm)</label>
-                    <input type="number" id="tf" value="6" step="0.1">
+                    <input type="number" id="tf" step="0.1" value="6">
                 </div>
+
                 <div class="form-group">
                     <label for="lf">有效宽度 lf (mm)</label>
-                    <input type="number" id="lf" value="80" step="0.1">
-                </div>
-            </div>
-
-            <h2 class="section-title">材料参数</h2>
-            <div class="input-row">
-                <div class="form-group">
-                    <label for="ey">屈服应变 εy</label>
-                    <input type="number" id="ey" value="0.00195" step="0.0001">
-                </div>
-                <div class="form-group">
-                    <label for="eh">强化应变 εh</label>
-                    <input type="number" id="eh" value="0.015263" step="0.0001">
+                    <input type="number" id="lf" step="0.1" value="80">
                 </div>
             </div>
 
             <div class="input-row">
                 <div class="form-group">
-                    <label for="em">峰值应变 εm</label>
-                    <input type="number" id="em" value="0.137" step="0.001">
+                    <label for="fy">屈服强度 fy (MPa)</label>
+                    <input type="number" id="fy" step="1" value="410">
                 </div>
-                <div class="form-group">
-                    <label for="eu">断裂应变 εu</label>
-                    <input type="number" id="eu" value="1" step="0.1">
-                </div>
-            </div>
 
-            <div class="input-row">
                 <div class="form-group">
                     <label for="E">弹性模量 E (MPa)</label>
-                    <input type="number" id="E" value="210000" step="1000">
-                </div>
-                <div class="form-group">
-                    <label for="Eh">强化模量 Eh (MPa)</label>
-                    <input type="number" id="Eh" value="2700" step="100">
+                    <input type="number" id="E" step="1000" value="210000">
                 </div>
             </div>
 
             <div class="input-row">
                 <div class="form-group">
-                    <label for="Enk">颈缩强化 Enk (MPa)</label>
-                    <input type="number" id="Enk" value="150" step="10">
+                    <label for="Eh">强化模量 Eh (MPa)</label>
+                    <input type="number" id="Eh" step="100" value="2700">
                 </div>
+
+                <div class="form-group">
+                    <label for="Enk">颈缩强化 Enk (MPa)</label>
+                    <input type="number" id="Enk" step="10" value="150">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="form-group">
+                    <label for="boltDiameter">螺栓直径 (mm)</label>
+                    <input type="number" id="boltDiameter" step="0.1" value="6.82725">
+                </div>
+
+                <div class="form-group">
+                    <label for="boltLength">螺栓计算长度 LB (mm)</label>
+                    <input type="number" id="boltLength" step="0.1" value="20.5">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="form-group">
+                    <label for="boltHeadDiameter">螺栓头直径 (mm)</label>
+                    <input type="number" id="boltHeadDiameter" step="0.1" value="13">
+                </div>
+
+                <div class="form-group">
+                    <label for="washerDiameter">垫片直径 (mm)</label>
+                    <input type="number" id="washerDiameter" step="0.1" value="15">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="form-group">
+                    <label for="epsilon_h">强化应变 εh</label>
+                    <input type="number" id="epsilon_h" step="0.0001" value="0.015263">
+                </div>
+
+                <div class="form-group">
+                    <label for="epsilon_m">峰值应变 εm</label>
+                    <input type="number" id="epsilon_m" step="0.001" value="0.137">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="form-group">
+                    <label for="epsilon_u">断裂应变 εu</label>
+                    <input type="number" id="epsilon_u" step="0.01" value="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="D_bolt">螺栓率强化参数 D</label>
+                    <input type="number" id="D_bolt" step="1000" value="1300000">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="form-group">
+                    <label for="p_bolt">螺栓率强化参数 p</label>
+                    <input type="number" id="p_bolt" step="0.1" value="3.6">
+                </div>
+
                 <div class="form-group">
                     <label for="D_flange">翼缘率强化参数 D</label>
-                    <input type="number" id="D_flange" value="4945" step="100">
+                    <input type="number" id="D_flange" step="1" value="4945">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="p_flange">翼缘率强化指数 p</label>
-                <input type="number" id="p_flange" value="2.7" step="0.1">
+                <label for="p_flange">翼缘率强化参数 p</label>
+                <input type="number" id="p_flange" step="0.1" value="2.7">
             </div>
 
-            <h2 class="section-title">螺栓参数</h2>
-            <div class="input-row">
-                <div class="form-group">
-                    <label for="bolt_diameter">螺栓直径 (mm)</label>
-                    <input type="number" id="bolt_diameter" value="6.82725" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label for="LB">计算长度 LB (mm)</label>
-                    <input type="number" id="LB" value="20.5" step="0.1">
-                </div>
+            <button id="calculateBtn" class="btn">计算并生成曲线</button>
+        </div>
+
+        <div class="output-section">
+            <h2>计算结果</h2>
+            <div class="failure-mode">
+                <h3>失效模式</h3>
+                <div id="failureModeResult">等待计算...</div>
             </div>
 
-            <div class="input-row">
-                <div class="form-group">
-                    <label for="D_bolt">螺栓率强化参数 D</label>
-                    <input type="number" id="D_bolt" value="1300000" step="10000">
-                </div>
-                <div class="form-group">
-                    <label for="p_bolt">螺栓率强化指数 p</label>
-                    <input type="number" id="p_bolt" value="3.6" step="0.1">
-                </div>
-            </div>
-
-            <div class="btn-group">
-                <button class="btn-calculate" onclick="calculate()">计算曲线</button>
-                <button class="btn-reset" onclick="resetForm()">重置参数</button>
-            </div>
+            <div class="chart-container" id="chart"></div>
 
             <div class="results">
-                <h3>计算结果</h3>
-                <div class="result-item">
-                    <span class="result-label">初始刚度:</span>
-                    <span class="result-value" id="initial-stiffness">-</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">屈服荷载:</span>
-                    <span class="result-value" id="yield-load">-</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">极限荷载:</span>
-                    <span class="result-value" id="ultimate-load">-</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">极限变形:</span>
-                    <span class="result-value" id="ultimate-deformation">-</span>
-                </div>
+                <h3>关键数据点</h3>
+                <div id="pointsResult">等待计算...</div>
             </div>
         </div>
-
-        <div class="chart-section">
-            <h2 class="section-title">曲线图表</h2>
-            <div class="chart-container" id="chart"></div>
-        </div>
     </div>
-
-    <footer>
-        <p> T形件全过程曲线计算器 </p>
-    </footer>
 </div>
 
-<script>
-    // 初始化ECharts实例
-    const chartDom = document.getElementById('chart');
-    const myChart = echarts.init(chartDom);
-
-    // 默认图表配置
-    const option = {
-        title: {
-            text: 'T形件全过程曲线',
-            left: 'center'
-        },
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-                type: 'cross'
-            }
-        },
-        legend: {
-            data: ['M8P6准静态', '引入位移协调条件', '原来的预测', 'ABF计算公式'],
-            top: 30
-        },
-        grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '5%',
-            top: '15%',
-            containLabel: true
-        },
-        xAxis: {
-            type: 'value',
-            name: '变形 (mm)',
-            nameLocation: 'middle',
-            nameGap: 30
-        },
-        yAxis: {
-            type: 'value',
-            name: '荷载 (kN)',
-            nameLocation: 'middle',
-            nameGap: 40
-        },
-        series: [
-            {
-                name: 'M8P6准静态',
-                type: 'line',
-                smooth: true,
-                data: []
-            },
-            {
-                name: '引入位移协调条件',
-                type: 'line',
-                smooth: true,
-                data: []
-            },
-            {
-                name: '原来的预测',
-                type: 'line',
-                smooth: true,
-                data: []
-            },
-            {
-                name: 'ABF计算公式',
-                type: 'line',
-                smooth: true,
-                data: []
-            }
-        ]
-    };
-
-    myChart.setOption(option);
-
-    // 窗口大小变化时调整图表大小
-    window.addEventListener('resize', function() {
-        myChart.resize();
-    });
-
-    // 计算函数
-    function calculate() {
-        // 获取输入参数
-        const params = {
-            m: parseFloat(document.getElementById('m').value),
-            n: parseFloat(document.getElementById('n').value),
-            tf: parseFloat(document.getElementById('tf').value),
-            lf: parseFloat(document.getElementById('lf').value),
-            ey: parseFloat(document.getElementById('ey').value),
-            eh: parseFloat(document.getElementById('eh').value),
-            em: parseFloat(document.getElementById('em').value),
-            eu: parseFloat(document.getElementById('eu').value),
-            E: parseFloat(document.getElementById('E').value),
-            Eh: parseFloat(document.getElementById('Eh').value),
-            Enk: parseFloat(document.getElementById('Enk').value),
-            D_flange: parseFloat(document.getElementById('D_flange').value),
-            p_flange: parseFloat(document.getElementById('p_flange').value),
-            bolt_diameter: parseFloat(document.getElementById('bolt_diameter').value),
-            LB: parseFloat(document.getElementById('LB').value),
-            D_bolt: parseFloat(document.getElementById('D_bolt').value),
-            p_bolt: parseFloat(document.getElementById('p_bolt').value)
-        };
-
-        // 这里应该实现Excel中的计算逻辑
-        // 由于Excel中的计算非常复杂，这里仅提供模拟数据
-
-        // 模拟计算过程
-        const results = simulateCalculation(params);
-
-        // 更新图表
-        updateChart(results);
-
-        // 更新结果
-        updateResults(results);
-    }
-
-    // 模拟计算函数 - 实际应用中需要替换为真实的计算逻辑
-    function simulateCalculation0(params) {
-        // 生成模拟数据点
-        // const pointsCount = 50;
-        const pointsCount = 7;
-        const m8p6Data = [];
-        const displacementData = [];
-        const predictionData = [];
-        const abfData = [];
-
-        // 初始刚度计算
-        const initialStiffness = params.E * params.tf * Math.pow(params.lf, 3) / Math.pow(params.m, 3) / 1000;
-
-        // 屈服荷载计算
-        const yieldLoad = params.E * params.ey * params.tf * params.lf / 1000;
-
-        // 极限荷载计算
-        const ultimateLoad = yieldLoad * 1.5;
-
-        // 极限变形计算
-        const ultimateDeformation = params.m * 0.1;
-
-        // 生成曲线数据点
-        for (let i = 0; i <= pointsCount; i++) {
-            const x = i * ultimateDeformation / pointsCount;
-
-            // M8P6准静态曲线
-            const y1 = ultimateLoad * (1 - Math.exp(-5 * x / ultimateDeformation)) *
-                (1 + 0.2 * Math.sin(2 * Math.PI * x / ultimateDeformation));
-
-            // 引入位移协调条件曲线
-            const y2 = ultimateLoad * (1 - Math.exp(-4 * x / ultimateDeformation)) *
-                (1 + 0.15 * Math.sin(2.5 * Math.PI * x / ultimateDeformation));
-
-            // 原来的预测曲线
-            const y3 = ultimateLoad * (1 - Math.exp(-3.5 * x / ultimateDeformation)) *
-                (1 + 0.1 * Math.sin(3 * Math.PI * x / ultimateDeformation));
-
-            // ABF计算公式曲线
-            const y4 = ultimateLoad * (1 - Math.exp(-3 * x / ultimateDeformation)) *
-                (1 + 0.05 * Math.sin(3.5 * Math.PI * x / ultimateDeformation));
-
-            m8p6Data.push([x, y1]);
-            displacementData.push([x, y2]);
-            predictionData.push([x, y3]);
-            abfData.push([x, y4]);
-        }
-
-        return {
-            m8p6: m8p6Data,
-            displacement: displacementData,
-            prediction: predictionData,
-            abf: abfData,
-            initialStiffness: initialStiffness.toFixed(2),
-            yieldLoad: yieldLoad.toFixed(2),
-            ultimateLoad: ultimateLoad.toFixed(2),
-            ultimateDeformation: ultimateDeformation.toFixed(2)
-        };
-    }
-
-    // 更新图表
-    function updateChart(results) {
-        option.series[0].data = results.m8p6;
-        option.series[1].data = results.displacement;
-        option.series[2].data = results.prediction;
-        option.series[3].data = results.abf;
-
-        myChart.setOption(option);
-    }
-
-    // 更新计算结果
-    function updateResults(results) {
-        document.getElementById('initial-stiffness').textContent = results.initialStiffness + ' kN/mm';
-        document.getElementById('yield-load').textContent = results.yieldLoad + ' kN';
-        document.getElementById('ultimate-load').textContent = results.ultimateLoad + ' kN';
-        document.getElementById('ultimate-deformation').textContent = results.ultimateDeformation + ' mm';
-    }
-
-    // 重置表单
-    function resetForm() {
-        document.getElementById('m').value = '40';
-        document.getElementById('n').value = '40';
-        document.getElementById('tf').value = '6';
-        document.getElementById('lf').value = '80';
-        document.getElementById('ey').value = '0.00195';
-        document.getElementById('eh').value = '0.015263';
-        document.getElementById('em').value = '0.137';
-        document.getElementById('eu').value = '1';
-        document.getElementById('E').value = '210000';
-        document.getElementById('Eh').value = '2700';
-        document.getElementById('Enk').value = '150';
-        document.getElementById('D_flange').value = '4945';
-        document.getElementById('p_flange').value = '2.7';
-        document.getElementById('bolt_diameter').value = '6.82725';
-        document.getElementById('LB').value = '20.5';
-        document.getElementById('D_bolt').value = '1300000';
-        document.getElementById('p_bolt').value = '3.6';
-
-        // 清空图表
-        option.series.forEach(series => {
-            series.data = [];
-        });
-        myChart.setOption(option);
-
-        // 清空结果
-        document.getElementById('initial-stiffness').textContent = '-';
-        document.getElementById('yield-load').textContent = '-';
-        document.getElementById('ultimate-load').textContent = '-';
-        document.getElementById('ultimate-deformation').textContent = '-';
-    }
-
-    // 页面加载时初始化
-    window.onload = function() {
-        calculate();
-    };
-
-
-
-
-
-
-
-    // 完整的计算函数 - 基于Excel实际逻辑
-    function calculateCurves(params) {
-        // 初始化计算结果
-        const results = {
-            m8p6: [],
-            displacement: [],
-            prediction: [],
-            abf: [],
-            initialStiffness: 0,
-            yieldLoad: 0,
-            ultimateLoad: 0,
-            ultimateDeformation: 0
-        };
-
-        // 1. 计算基本参数
-        const λ = params.n / params.m; // D4 = n/m
-        const χy = 2 * params.ey / params.tf; // D21 = 2*εy/tf
-        const χh = 2 * params.eh / params.tf; // D22 = 2*εh/tf
-        const χm = 2 * params.em / params.tf; // D23 = 2*εm/tf
-        const χf = 2 * params.eu / params.tf; // D24 = 2*εu/tf
-
-        // 计算弯矩相关参数
-        const My = params.lf * Math.pow(params.tf, 2) * params.E * params.ey / 6; // D27 屈服弯矩
-        const Mp = My * 1.5; // D31 塑性弯矩
-
-        // 螺栓参数计算
-        const boltArea = Math.PI * Math.pow(params.bolt_diameter, 2) / 4; // 螺栓截面积
-        const boltStiffness = params.E * boltArea / params.LB; // J53 螺栓刚度
-
-        // 率效应参数（简化处理）
-        const rateEffectFlange = 1.1; // J51 翼缘率效应系数
-        const momentAmplification = 1.2; // J58 弯矩放大系数
-
-        // 2. 计算M8P6准静态曲线
-        calculateM8P6Curve();
-
-        // 3. 计算引入位移协调条件曲线
-        calculateDisplacementCoordinationCurve();
-
-        // 4. 计算原来的预测曲线（基于Y列数据）
-        calculatePredictionCurve();
-
-        // 5. 计算ABF计算公式曲线（基于AC列数据）
-        calculateABFCurve();
-
-        // 6. 更新结果参数
-        updateResultParameters();
-
-        return results;
-
-        // M8P6准静态曲线计算
-        function calculateM8P6Curve() {
-            // const points = 100;
-            const points = 94;
-            const maxCurvature = χf * 1.5; // 最大曲率
-
-            for (let i = 0; i <= points; i++) {
-                const χ = i * maxCurvature / points; // H列 曲率
-
-                // 计算弯矩I (I列)
-                const M = calculateMoment(χ, My, χy, χh, χm, χf, params.Eh, params.Enk) * momentAmplification;
-
-                // 计算转角θ (K列)
-                const θ = calculateRotationAngle(χ, M, My, χy, params.m, rateEffectFlange, momentAmplification);
-
-                // 计算翼缘弯矩L (L列)
-                const L = 2 * M * (1 + rateEffectFlange) / params.m / Math.cos(θ);
-
-                // 计算变形分量
-                const Δp = params.m * Math.sin(θ); // M列 几何变形
-                const Δe = L / boltStiffness; // N列 弹性变形
-                const Δ2 = calculatePlasticDeformation(L); // T列 塑性变形（插值）
-
-                // 总变形Δ (O列)
-                const Δ = Δp + Δe + Δ2;
-
-                // 荷载F (纵坐标)
-                const F = L;
-
-                if (Δ >= 0 && F >= 0) {
-                    results.m8p6.push([Δ, F / 1000]); // 转换为kN
-                }
-            }
-        }
-
-        // 引入位移协调条件曲线计算
-        function calculateDisplacementCoordinationCurve() {
-            // 定义7个关键状态点
-            const states = [
-                { type: 'Ma=My', moment: My },
-                { type: 'Ma=Mh', moment: calculateMoment(χh, My, χy, χh, χm, χf, params.Eh, params.Enk) },
-                { type: 'Ma=Mm', moment: calculateMoment(χm, My, χy, χh, χm, χf, params.Eh, params.Enk) },
-                { type: 'Ma=Mu', moment: calculateMoment(χf, My, χy, χh, χm, χf, params.Eh, params.Enk) },
-                { type: 'B=By', load: params.By || 8000 }, // 螺栓屈服荷载
-                { type: 'B=Bu', load: params.Bu || 12000 }, // 螺栓峰值荷载
-                { type: 'B=Bf', load: params.Bf || 10000 }  // 螺栓断裂荷载
-            ];
-
-            // 转动刚度相关参数（简化）
-            const K49 = 0.8; // 转动刚度参数1
-            const K50 = 1.2; // 转动刚度参数2
-
-            states.forEach(state => {
-                let F, M, χ;
-
-                if (state.load) {
-                    // 螺栓状态点
-                    F = state.load;
-                    // 估算对应的弯矩（简化）
-                    M = F * params.m / 2;
-                    χ = estimateCurvatureFromMoment(M, My, χy, χh, χm);
-                } else {
-                    // 弯矩状态点
-                    M = state.moment * momentAmplification;
-                    χ = estimateCurvatureFromMoment(M, My, χy, χh, χm);
-                    F = 2 * M * (1 + rateEffectFlange) / params.m;
-                }
-
-                // 计算转角θ
-                const θ = calculateRotationAngle(χ, M, My, χy, params.m, rateEffectFlange, momentAmplification);
-
-                // 计算变形分量 (S列和T列)
-                const S = K49 * Math.sin(θ) * params.m + (K50 - K49) * params.tf / λ / 2 + F / boltStiffness;
-                const T = calculatePlasticDeformation(F);
-
-                // 总变形Δ = 2*S + T (U列)
-                const Δ = 2 * S + T;
-
-                if (Δ >= 0 && F >= 0) {
-                    results.displacement.push([Δ, F / 1000]); // 转换为kN
-                }
-            });
-
-            // 对点进行排序
-            results.displacement.sort((a, b) => a[0] - b[0]);
-        }
-
-        // 原来的预测曲线计算（基于Y列数据）
-        function calculatePredictionCurve() {
-            // 基于Excel中Y列（荷载F）和对应的变形计算
-            const predictionPoints = [
-                [0, 0], [2, 15], [5, 40], [10, 65], [15, 80],
-                [20, 85], [25, 82], [30, 75], [35, 65], [40, 55]
-            ];
-
-            results.prediction = predictionPoints.map(point => [point[0], point[1]]);
-        }
-
-        // ABF计算公式曲线计算（基于AC列数据）
-        function calculateABFCurve() {
-            // 基于Excel中AC列（ABF计算公式）数据
-            const abfPoints = [
-                [0, 0], [1, 12], [3, 35], [6, 60], [10, 78],
-                [15, 85], [20, 88], [25, 86], [30, 80], [35, 70]
-            ];
-
-            results.abf = abfPoints.map(point => [point[0], point[1]]);
-        }
-
-        // 更新结果参数
-        function updateResultParameters() {
-            // 初始刚度（从曲线初始斜率计算）
-            if (results.m8p6.length > 2) {
-                const initialSlope = (results.m8p6[1][1] - results.m8p6[0][1]) / (results.m8p6[1][0] - results.m8p6[0][0]);
-                results.initialStiffness = initialSlope.toFixed(2);
-            }
-
-            // 屈服荷载（第一个明显拐点）
-            results.yieldLoad = (My * 2 / params.m / 1000).toFixed(2);
-
-            // 极限荷载和变形
-            let maxLoad = 0;
-            let maxDeformation = 0;
-
-            results.m8p6.forEach(point => {
-                if (point[1] > maxLoad) {
-                    maxLoad = point[1];
-                    maxDeformation = point[0];
-                }
-            });
-
-            results.ultimateLoad = maxLoad.toFixed(2);
-            results.ultimateDeformation = maxDeformation.toFixed(2);
-        }
-
-        // 辅助函数：计算弯矩（基于材料本构关系）
-        function calculateMoment(χ, My, χy, χh, χm, χf, Eh, Enk) {
-            // 简化的材料本构关系计算
-            if (χ <= χy) {
-                // 弹性阶段
-                return My * (χ / χy);
-            } else if (χ <= χh) {
-                // 屈服平台
-                return My * (1 + 0.1 * (χ - χy) / (χh - χy));
-            } else if (χ <= χm) {
-                // 强化阶段
-                return My * (1.1 + 0.3 * (χ - χh) / (χm - χh));
-            } else {
-                // 下降段
-                const declineFactor = 1 - 0.5 * (χ - χm) / (χf - χm);
-                return My * 1.4 * Math.max(declineFactor, 0.3);
-            }
-        }
-
-        // 辅助函数：计算转角
-        function calculateRotationAngle(χ, M, My, χy, m, rateEffect, momentAmplification) {
-            // 基于Excel中K列的公式简化
-            const J = 0.5; // 简化的J参数
-            const term1 = χ - My / M * momentAmplification * J;
-            const term2 = 0.5 * χy * M / momentAmplification / My;
-
-            return m / (1 + rateEffect) * (term1 - term2);
-        }
-
-        // 辅助函数：计算塑性变形（插值）
-        function calculatePlasticDeformation(F) {
-            // 基于Excel中U20:V22的插值表简化
-            const deformationTable = [
-                { force: 0, deformation: 0 },
-                { force: 10000, deformation: 2 },
-                { force: 20000, deformation: 8 }
-            ];
-
-            // 线性插值
-            for (let i = 0; i < deformationTable.length - 1; i++) {
-                if (F >= deformationTable[i].force && F <= deformationTable[i + 1].force) {
-                    const ratio = (F - deformationTable[i].force) / (deformationTable[i + 1].force - deformationTable[i].force);
-                    return deformationTable[i].deformation + ratio * (deformationTable[i + 1].deformation - deformationTable[i].deformation);
-                }
-            }
-
-            // 外推
-            if (F < deformationTable[0].force) return 0;
-            return deformationTable[deformationTable.length - 1].deformation;
-        }
-
-        // 辅助函数：根据弯矩估算曲率
-        function estimateCurvatureFromMoment(M, My, χy, χh, χm) {
-            // 简化的逆计算
-            if (M <= My) {
-                return χy * (M / My);
-            } else if (M <= My * 1.1) {
-                return χy + (χh - χy) * (M - My) / (My * 0.1);
-            } else if (M <= My * 1.4) {
-                return χh + (χm - χh) * (M - My * 1.1) / (My * 0.3);
-            } else {
-                return χm;
-            }
-        }
-    }
-
-    // 替换原来的simulateCalculation函数
-    function simulateCalculation(params) {
-        return calculateCurves(params);
-    }
-
-
-
-
-
-
-
-</script>
+<script src="js/t-model.js">    </script>
 </body>
 </html>
