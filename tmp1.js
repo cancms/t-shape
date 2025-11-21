@@ -85,6 +85,9 @@ excel文件已经上传。 分三步计算：
 
 
 
-
+function chazhi(x, x1,y1, x2, y2) {
+   let y = (x-x1) * (y2-y1) / (x2-x1) + y1
+    return y;
+}
 
 

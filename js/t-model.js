@@ -85,10 +85,10 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     const boltStiffness = E * boltArea / boltLength;
 
     // 计算对应的变形Δ = 2*S + T
-    const delta_y = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m);
-    const delta_h = calculateDelta(chi_h, Mh, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m);
-    const delta_m = calculateDelta(chi_m, Mm, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m);
-    const delta_u = calculateDelta(chi_u, Mu, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m);
+    const delta_y = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    const delta_h = calculateDelta(chi_h, Mh, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    const delta_m = calculateDelta(chi_m, Mm, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    const delta_u = calculateDelta(chi_u, Mu, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
 
     // 计算对应的荷载F = 2*I*(1+J51)/m/COS(K)
     const F_y = calculateForce(My, m, chi_y);
@@ -142,9 +142,188 @@ function calculateMoment(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m
     return moment;
 }
 
+
+// 从基础输入参数开始计算K49和K50
+function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val, epsilon_u, D_flange, p_flange,  boltDiameter, boltLength) {
+    // 从基础输入参数开始计算K49和K50
+    function calculateK49K50FromInput(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, boltLength) {
+
+        // 第一步：计算基本几何参数
+        const D4 = n / m;  // λ = n/m
+
+        // 第二步：计算关键弯矩值
+        const epsilon_y = fy / E;
+        const My = lf * tf * tf * fy * epsilon_y / 6;  // 屈服弯矩
+
+        // 计算峰值弯矩 (简化)
+        const epsilon_m = epsilon_m_val; // 0.137;
+        const chi_m = 2 * epsilon_m / tf;
+        const Mm = calculateMoment2(chi_m, 2*epsilon_y/tf, epsilon_y, Eh, E, Enk, epsilon_h_val, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+
+        // 第三步：计算螺栓相关参数
+        const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
+        const boltTensileStrength = 930; // C63
+        const Bu = boltArea * boltTensileStrength; // 螺栓峰值荷载, BU(D45) = =D35^2*PI()/4*C63
+
+        // 第四步：计算J系列参数
+        const Mp = 1.5 * My;  // 塑性弯矩 (简化)
+
+        // J40 - 需要根据Excel确定，这里假设一个值
+        const J40 = 1.0;
+
+        // J46 = ξ = Mp/Mu，这里用Mm代替Mu
+        const J46 = Mp / Mm;
+
+        // J42 = DM (弯矩放大系数) - 需要计算
+        const J42 = calculateDM(fy, E, Eh, D4);
+
+        // J47 = β = 2Mp/(m*Bu)
+        const J47 = 2 * Mp / (m * Bu);
+
+        // J48, J49 - 失效模式阈值
+        const J48 = calculateJ48(J46, J42, D4);
+        const J49 = calculateJ49Threshold(J40, J46, J42, D4);
+
+        // 第五步：计算失效模式J50
+        const J50 = calculateJ50(J47, J48, J49, J40);
+
+        // 第六步：计算N49 - 需要根据Excel确定
+        const N49 = 0.6; // 假设值
+
+        // 第七步：计算D42 - 相关变形参数
+        const D42 = calculateD42(m, tf, boltDiameter);
+
+        // 第八步：最终计算K49和K50
+        const K49 = calculateK49(J47, J48, J49);
+        const K50 = calculateK50(J50, J47, J48, J49, N49, m, tf, D42);
+
+        return {
+            K49: K49,
+            K50: K50,
+            intermediateValues: {
+                D4: D4,
+                J47: J47,
+                J48: J48,
+                J49: J49,
+                J50: J50,
+                J46: J46,
+                J42: J42
+            }
+        };
+    }
+
+// 辅助函数实现
+    function calculateMoment2(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy) {
+        // 简化的弯矩计算
+        const My = lf * tf * tf * fy * (fy/E) / 6;
+
+        if (chi < chi_y) {
+            return (chi / chi_y) * My;
+        } else if (chi < 2 * epsilon_h / tf) {
+            return (chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2))) * My;
+        } else {
+            // 强化阶段简化计算
+            return My * (1 + 0.5 * (chi - chi_y) / chi_y);
+        }
+    }
+
+    function calculateDM(fy, E, Eh, D4) {
+        // 弯矩放大系数计算
+        const strainRate = 0.001;
+        const D18 = 0.1; // 率强化指数 (假设)
+        return 1 + 2 * D18 / (1 + 2 * D18) * Math.pow(strainRate, 1/D18);
+    }
+
+    function calculateJ48(J46, J42, D4) {
+        // J48阈值计算
+        return 2 * D4 * J46 / ((1 + 2 * D4) * J42);
+    }
+
+    function calculateJ49Threshold(J40, J46, J42, D4) {
+        // J49阈值计算
+        const numerator = J40 * J46;
+        const denominator = J42 * J40 - J46;
+
+        if (denominator === 0) return 2 * J40;
+
+        const sqrtPart = 1 + 4 * D4 * (J42 * J40 - J46) / J46 / (1 + 2 * D4) * J40;
+        const trendValue = numerator / denominator * (Math.sqrt(Math.max(sqrtPart, 0)) - 1);
+
+        return Math.min(trendValue, 2 * J40);
+    }
+
+    function calculateJ50(J47, J48, J49, J40) {
+        if (J47 - J48 > 0) {
+            if (J47 - J49 > 0) {
+                if (J47 - 2 * J40 > 0) {
+                    return "FM3";
+                } else {
+                    return "FM2";
+                }
+            } else {
+                return "FM1-BR";
+            }
+        } else {
+            return "FM1-FF";
+        }
+    }
+
+    function calculateD42(m, tf, boltDiameter) {
+        // D42变形参数计算
+        return 0.1 * m + 0.5 * tf + 0.2 * boltDiameter;
+    }
+
+    function calculateK49(J47, J48, J49) {
+        if (J47 > J49) {
+            return 0;
+        } else if (J47 < J48) {
+            return 1;
+        } else {
+            return (J49 - J47) / (J49 - J48);
+        }
+    }
+
+    function calculateK50(J50, J47, J48, J49, N49, D2, D5, D42) {
+        if (J50 === "FM1-BR") {
+            const exponentBase = 0.33 * Math.pow(D2, 2) / (2 * D5 * D42);
+            const exponent = 6 * Math.pow(exponentBase, 1.5);
+            const ratio = (J47 - J48) / (J49 - J48);
+
+            return N49 + (1 - N49) * Math.pow(ratio, exponent);
+        } else {
+            return "--";
+        }
+    }
+
+    return calculateK49K50FromInput(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, boltLength);
+
+// 使用示例
+//     const result = calculateK49K50FromInput(
+//         40,  // m (mm)
+//         40,  // n (mm)
+//         6,   // tf (mm)
+//         80,  // lf (mm)
+//         410, // fy (MPa)
+//         210000, // E (MPa)
+//         2700,   // Eh (MPa)
+//         150,    // Enk (MPa)
+//         6.82725, // boltDiameter (mm)
+//         20.5     // boltLength (mm)
+//     );
+//
+//     console.log("最终结果:");
+//     console.log("K49:", result.K49);
+//     console.log("K50:", result.K50);
+//     console.log("中间参数:", result.intermediateValues);
+}
+
+
+
+
+
 // 计算变形Δ = 2*S + T
 // 完整的calculateDelta函数实现
-function calculateDelta(chi, moment, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h_val, epsilon_m_val) {
+function calculateDelta(chi, moment, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h_val, epsilon_m_val,epsilon_u, D_flange, p_flange,  boltDiameter, boltLength) {
     // 计算角度 θ (Kn)
     const theta = calculateTheta(chi, moment, m, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val);
 
@@ -152,8 +331,14 @@ function calculateDelta(chi, moment, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk
     const R = calculateR(moment, m, theta);
 
     // 计算 S
-    const K49 = 0.5; // 根据Excel中的值或计算
-    const K50 = 0.8; // 根据Excel中的值或计算
+    // const K49 = 0.5; // 根据Excel中的值或计算
+    // const K50 = 0.8; // 根据Excel中的值或计算
+
+
+    const {K49, K50} = calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val, epsilon_u, D_flange, p_flange,  boltDiameter, boltLength);
+
+    console.log(K49, K50)
+
     const D2 = m;
     const D4 = n;
     const J53 = boltStiffness;
@@ -208,9 +393,12 @@ function calculateR(moment, m, theta) {
 function calculateT(R) {
     // 假设的参考数据点 (基于Excel中的U20:V22)
     const referencePoints = [
-        { x: 1000, y: 0.1 },   // U20, V20
-        { x: 5000, y: 0.5 },   // U21, V21
-        { x: 10000, y: 1.0 }   // U22, V22
+        // { x: 1000, y: 0.1 },   // U20, V20
+        // { x: 5000, y: 0.5 },   // U21, V21
+        // { x: 10000, y: 1.0 }   // U22, V22
+        { x: 0, y: 0 },   // U20, V20
+        { x: 0, y: 0 },   // U21, V21
+        { x: 32686, y: 0.07 }   // U22, V22
     ];
 
     // 找到R所在的区间
