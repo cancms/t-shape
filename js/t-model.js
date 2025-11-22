@@ -62,6 +62,8 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
 
     const My = lf * tf * tf * fy  / 6;
 
+    // console.log("屈服弯矩0", My)
+
     // 计算强化曲率
     const chi_h = 2 * epsilon_h / tf;
 
@@ -73,6 +75,8 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
 
     // 计算峰值弯矩
     const Mm = calculateMoment(chi_m, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+    console.log("计算峰值弯矩0", Mm)
+
 
     // 计算断裂曲率
     const chi_u = 2 * epsilon_u / tf;
@@ -104,6 +108,115 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
         { x: delta_u, y: F_u, name: "断裂点" }
     ];
 }
+
+
+// 屈服弯矩, lf 宽度， tf厚度， fy(屈服应力410) = E(弹性模量) * epsilon_y(屈服应变)
+function calculateMh(tf, lf, fy) {
+    const My = lf * tf * tf * fy  / 6;
+    return My; // 屈服弯矩
+}
+
+function calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk,
+                             epsilon_h = 0.015263, epsilon_m = 0.137, epsilon_u = 1) {
+
+    // 强化弯矩
+    function calculateMh(chi_h, chi_y, My) {
+        // chi_h = 强化曲率 = 2 * εh / tf
+        // chi_y = 屈服曲率 = 2 * εy / tf
+        // My = 屈服弯矩
+
+        const ratio = chi_h / chi_y;
+        const term1 = ratio;
+        const term2 = 0.5 * (3 - 2 * ratio - Math.pow(chi_y / chi_h, 2));
+
+        return (term1 + term2) * My;
+    }
+
+    // 峰值弯矩
+    function calculateMm(chi_m, chi_y, chi_h, Eh, E, epsilon_y, My) {
+        // chi_m = 峰值曲率 = 2 * εm / tf
+        // chi_h = 强化曲率 = 2 * εh / tf
+        // Eh = 强化模量
+        // E = 弹性模量
+        // epsilon_y = 屈服应变 = fy/E
+
+        const ratio_m = chi_m / chi_y;
+        const ratio_h = chi_h / chi_y;
+
+        // 基础项
+        const term1 = ratio_m;
+        const term2 = 0.5 * (3 - 2 * ratio_m - Math.pow(chi_y / chi_m, 2));
+
+        // 强化修正项
+        const term3 = 0.5 * (Eh / E) * (ratio_m - ratio_h);
+        const term4 = (1 - chi_h / chi_m) * (2 + chi_h / chi_m);
+
+        return (term1 + term2 + term3 * term4) * My;
+    }
+
+
+    // 断裂弯矩
+    function calculateMu(chi_u, chi_y, chi_h, chi_m, Eh, Enk, E, epsilon_y, My) {
+        // chi_u = 断裂曲率 = 2 * εu / tf
+        // chi_m = 峰值曲率 = 2 * εm / tf
+        // Enk = 颈缩强化模量
+
+        const ratio_u = chi_u / chi_y;
+        const ratio_h = chi_h / chi_y;
+        const ratio_m = chi_m / chi_y;
+
+        // 基础项
+        const term1 = ratio_u;
+        const term2 = 0.5 * (3 - 2 * ratio_u - Math.pow(chi_y / chi_u, 2));
+
+        // 强化修正项
+        const term3 = 0.5 * (Eh / E) * (ratio_u - ratio_h);
+        const term4 = (1 - chi_h / chi_u) * (2 + chi_h / chi_u);
+
+        // 颈缩修正项
+        const term5 = 0.5 * ((Eh - Enk) / E) * (ratio_u - ratio_m);
+        const term6 = (1 - chi_m / chi_u) * (2 + chi_m / chi_u);
+
+        return (term1 + term2 + term3 * term4 - term5 * term6) * My;
+    }
+
+    // 基本参数计算
+    const epsilon_y = fy / E;
+    const chi_y = 2 * epsilon_y / tf;
+    const chi_h = 2 * epsilon_h / tf;
+    const chi_m = 2 * epsilon_m / tf;
+    const chi_u = 2 * epsilon_u / tf;
+
+    // 屈服弯矩
+    const My = lf * tf * tf * fy * epsilon_y / 6;
+
+    // 强化弯矩
+    const Mh = calculateMh(chi_h, chi_y, My);
+
+    // 峰值弯矩
+    const Mm = calculateMm(chi_m, chi_y, chi_h, Eh, E, epsilon_y, My);
+
+    // 断裂弯矩
+    const Mu = calculateMu(chi_u, chi_y, chi_h, chi_m, Eh, Enk, E, epsilon_y, My);
+
+    // 塑性弯矩 (Excel D31单元格)
+    const Mp = My * 3 / 2;
+
+    return {
+        My: My,
+        Mh: Mh,
+        Mm: Mm,
+        Mu: Mu,
+        Mp: Mp,
+        curvatures: {
+            chi_y: chi_y,
+            chi_h: chi_h,
+            chi_m: chi_m,
+            chi_u: chi_u
+        }
+    };
+}
+
 
 // 计算弯矩的通用函数 - 根据Excel中的完整公式实现
 // 更新calculateMoment函数签名
@@ -153,12 +266,18 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
 
         // 第二步：计算关键弯矩值
         const epsilon_y = fy / E;
-        const My = lf * tf * tf * fy * epsilon_y / 6;  // 屈服弯矩
+
+        // console.log("epsilon_y", epsilon_y)
+        // const My = lf * tf * tf * fy * epsilon_y / 6;  // 屈服弯矩
+        const My = lf * tf * tf * fy  / 6;  // 屈服弯矩
+
+        // console.log("屈服弯矩", My)
 
         // 计算峰值弯矩 (简化)
         const epsilon_m = epsilon_m_val; // 0.137;
         const chi_m = 2 * epsilon_m / tf;
-        const Mm = calculateMoment2(chi_m, 2*epsilon_y/tf, epsilon_y, Eh, E, Enk, epsilon_h_val, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+        const Mm = calculateMoment(chi_m, 2*epsilon_y/tf, epsilon_y, Eh, E, Enk, epsilon_h_val, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+        console.log("计算峰值弯矩", Mm)
 
         // 第三步：计算螺栓相关参数
         const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
