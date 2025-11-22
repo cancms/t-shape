@@ -60,29 +60,41 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     // 计算屈服弯矩
     // const My = lf * tf * tf * fy * epsilon_y / 6;
 
-    const My = lf * tf * tf * fy  / 6;
+    // const My = lf * tf * tf * fy  / 6;
 
     // console.log("屈服弯矩0", My)
 
     // 计算强化曲率
     const chi_h = 2 * epsilon_h / tf;
 
+
+    const allMoments = calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, epsilon_u);
+
+    console.log("allMoments", allMoments)
+
+    // 屈服弯矩
+    const My = allMoments.My;
+
+
     // 计算强化弯矩
-    const Mh = calculateMoment(chi_h, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+    // const Mh = calculateMoment(chi_h, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+    const Mh = allMoments.Mh;
 
     // 计算峰值曲率
     const chi_m = 2 * epsilon_m / tf;
 
     // 计算峰值弯矩
-    const Mm = calculateMoment(chi_m, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
-    console.log("计算峰值弯矩0", Mm)
+    // const Mm = calculateMoment(chi_m, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+    const Mm = allMoments.Mm;
+
 
 
     // 计算断裂曲率
     const chi_u = 2 * epsilon_u / tf;
 
     // 计算断裂弯矩
-    const Mu = calculateMoment(chi_u, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+    // const Mu = calculateMoment(chi_u, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+    const Mu = allMoments.Mu;
 
     // 计算螺栓刚度
     const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
@@ -111,7 +123,7 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
 
 
 // 屈服弯矩, lf 宽度， tf厚度， fy(屈服应力410) = E(弹性模量) * epsilon_y(屈服应变)
-function calculateMh(tf, lf, fy) {
+function calculateMy(tf, lf, fy) {
     const My = lf * tf * tf * fy  / 6;
     return My; // 屈服弯矩
 }
@@ -188,7 +200,8 @@ function calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk,
     const chi_u = 2 * epsilon_u / tf;
 
     // 屈服弯矩
-    const My = lf * tf * tf * fy * epsilon_y / 6;
+    // const My = lf * tf * tf * fy * epsilon_y / 6;
+    const My = calculateMy(tf, lf, fy);
 
     // 强化弯矩
     const Mh = calculateMh(chi_h, chi_y, My);
@@ -220,7 +233,7 @@ function calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk,
 
 // 计算弯矩的通用函数 - 根据Excel中的完整公式实现
 // 更新calculateMoment函数签名
-function calculateMoment(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy) {
+function calculateMoment_excelBak(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy) {
 
     // 根据Excel中I列的复杂公式计算弯矩
     let moment;
@@ -332,19 +345,6 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
     }
 
 // 辅助函数实现
-    function calculateMoment2(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy) {
-        // 简化的弯矩计算
-        const My = lf * tf * tf * fy * (fy/E) / 6;
-
-        if (chi < chi_y) {
-            return (chi / chi_y) * My;
-        } else if (chi < 2 * epsilon_h / tf) {
-            return (chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2))) * My;
-        } else {
-            // 强化阶段简化计算
-            return My * (1 + 0.5 * (chi - chi_y) / chi_y);
-        }
-    }
 
     function calculateDM(fy, E, Eh, D4) {
         // 弯矩放大系数计算
@@ -509,7 +509,79 @@ function calculateR(moment, m, theta) {
 }
 
 // 计算 T - 实现TREND函数逻辑
-function calculateT(R) {
+// Ma: 为弯矩值， 参考插值表的值，用trend（excel函数）插值算法根据Ma（弯矩的值）得到 T（Δ2）的值
+function calculateT(Ma) {
+    // 插值算法，示例1：简单线性回归（最小二乘法）
+    // const tableYs = [100, 120, 150, 180, 200];
+    // const tableYs = [1, 2, 3, 4, 5];
+    // const inputXs = [6, 7, 8];
+    // const predictions = trend(tableYs, tableXs, inputXs);
+    // console.log('预测:', predictions);
+    // 输出: [220, 240, 260] (近似值)
+    function trend(y, x = [], new_x = [], constant = true) {
+        // 如果x为空，使用默认序列 [1, 2, 3, ...]
+        if (x.length === 0) {
+            x = Array.from({length: y.length}, (_, i) => i + 1);
+        }
+
+        // 如果没有提供new_x，使用x作为预测点
+        if (new_x.length === 0) {
+            new_x = [...x];
+        }
+
+        const n = y.length;
+
+        // 计算统计量
+        const sumX = x.reduce((a, b) => a + b, 0);
+        const sumY = y.reduce((a, b) => a + b, 0);
+        const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+        const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+
+        let slope, intercept;
+
+        if (constant) {
+            // 有截距的线性回归: y = a + bx
+            slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            intercept = (sumY - slope * sumX) / n;
+        } else {
+            // 无截距的线性回归: y = bx
+            slope = sumXY / sumX2;
+            intercept = 0;
+        }
+
+        // 计算预测值
+        return new_x.map(xi => intercept + slope * xi);
+    }
+
+
+    // 参考表, 假设的参考数据点 (基于Excel中的U21:V24)， 按 x 值从小到大排列
+    const referencePoints = [
+        { x: 0, y: 0 },   // U21, V21
+        { x: 32686, y: 0.07 },   // U22, V22
+        { x: 37715, y: 3.95 },   // U24, V24
+        { x: 46767, y: 1.30 },   // U23, V23
+    ];
+
+
+    const tableXs = [];
+    const tableYs = [];
+    const inputXs = [Ma];
+    referencePoints.map(p => {
+        tableXs.push(p.x);
+        tableYs.push(p.y);
+    });
+    const predictDelta2 = trend(tableYs, tableXs, inputXs);
+
+    // T 列（Δ2）的值
+    let T = 0;
+    if (predictDelta2.length > 0 ) {
+        T = predictDelta2[0];
+    }
+    return T;
+}
+
+// 计算 T - 实现TREND函数逻辑
+function calculateT_BAK(R) {
     // 假设的参考数据点 (基于Excel中的U20:V22)
     const referencePoints = [
         // { x: 1000, y: 0.1 },   // U20, V20
