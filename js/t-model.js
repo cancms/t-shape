@@ -51,7 +51,8 @@ document.getElementById('calculateBtn').addEventListener('click', function() {
         displayResults(allPoints, failureMode);
 
         // 绘制图表
-        drawChart(allPoints, failureMode);
+        // drawChart(allPoints, failureMode);
+        drawChartSimple(allPoints, failureMode);
     } catch (error) {
         console.error("计算错误:", error);
         alert("计算过程中出现错误，请检查输入参数");
@@ -129,18 +130,22 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     // My, 屈服弯矩点， 屈服点，   / 1000 ， 用千牛作为纵坐标的单位
     thePoint = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
     the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "屈服点" });
+    // the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000  });
 
     // Mh, 屈服弯矩点， 强化点
     thePoint = calculateDelta(chi_h, Mh, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
     the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "强化点" });
+    // the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000 });
 
     // Mm, 峰值弯矩点， 峰值点
     thePoint = calculateDelta(chi_m, Mm, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
     the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "峰值点" });
+    // the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000 });
 
     // Mu, 断裂弯矩点， 断裂点
     thePoint = calculateDelta(chi_u, Mu, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
     the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "断裂点" });
+    // the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000  });
 
     // 计算对应的荷载F = 2*I*(1+J51)/m/COS(K)
     // const F_y = calculateForce(My, m, chi_y);
@@ -952,6 +957,59 @@ function displayResults(points, failureMode) {
     document.getElementById('pointsResult').innerHTML = pointsHTML;
 }
 
+
+// 更简洁的版本
+function drawChartSimple(points, failureMode) {
+    const chartDom = document.getElementById('chart');
+    const myChart = echarts.init(chartDom);
+
+    const option = {
+        title: {
+            text: 'T形件全过程曲线',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: function(params) {
+                const point = points[params.dataIndex];
+                return `${point.name}<br/>变形Δ: ${point.x.toFixed(4)} mm<br/>荷载F: ${point.y.toFixed(2)} kN`;
+            }
+        },
+        xAxis: {
+            type: 'value',
+            name: '变形 Δ (mm)'
+        },
+        yAxis: {
+            type: 'value',
+            name: '荷载 F (kN)'
+        },
+        series: [{
+            type: 'line',
+            data: points.map(point => [point.x, point.y]),
+            showSymbol: 'circle',
+            // symbolSize: 8,
+            lineStyle: {
+                color: '#3498db',
+                width: 2
+            },
+
+        }],
+        grid: {
+            left: '10%',
+            right: '5%',
+            bottom: '15%',
+            top: '15%'
+        }
+    };
+
+    myChart.setOption(option);
+
+    window.addEventListener('resize', function() {
+        myChart.resize();
+    });
+}
+
+
 // 绘制图表
 function drawChart(points, failureMode) {
     const chartDom = document.getElementById('chart');
@@ -983,6 +1041,7 @@ function drawChart(points, failureMode) {
             name: '变形 Δ (mm)',
             nameLocation: 'middle',
             nameGap: 30,
+            // interval: 5, // 设置刻度间隔为5， 默认为10
             axisLine: {
                 lineStyle: {
                     color: '#333'
@@ -994,6 +1053,8 @@ function drawChart(points, failureMode) {
             name: '荷载 F (kN)',  // 改为千牛
             nameLocation: 'middle',
             nameGap: 40,
+            // interval: 25, // 设置刻度间隔为5， 默认为10
+
             axisLine: {
                 lineStyle: {
                     color: '#333'
