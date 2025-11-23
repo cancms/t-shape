@@ -1,3 +1,16 @@
+// 全部关键点弯矩 ： 屈服弯矩, 强化弯矩，峰值弯矩，断裂弯矩， 塑性弯矩
+let allMoments = {
+    My: 0, // 屈服弯矩
+    Mh: 0, // 强化弯矩
+    Mm: 0, // 峰值弯矩
+    Mu: 0, // 断裂弯矩
+    Mp: 0, // 塑性弯矩
+};
+
+
+// 位移相容系数k49 , k50
+let k49k50Params = {};
+
 document.getElementById('calculateBtn').addEventListener('click', function() {
     // 获取输入参数
     const m = parseFloat(document.getElementById('m').value);
@@ -68,7 +81,7 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     const chi_h = 2 * epsilon_h / tf;
 
 
-    const allMoments = calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, epsilon_u);
+    allMoments = calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, epsilon_u);
 
     console.log("allMoments", allMoments)
 
@@ -97,8 +110,9 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     const Mu = allMoments.Mu;
 
     // 计算螺栓刚度
-    const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
-    const boltStiffness = E * boltArea / boltLength;
+    // const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
+    // const boltStiffness = E * boltArea / boltLength;
+    const boltStiffness = 0; // 用单元格J53的值
 
     // 计算对应的变形Δ = 2*S + T
     const delta_y = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
@@ -231,66 +245,50 @@ function calculateAllMoments(m, n, tf, lf, fy, E, Eh, Enk,
 }
 
 
-// 计算弯矩的通用函数 - 根据Excel中的完整公式实现
-// 更新calculateMoment函数签名
-function calculateMoment_excelBak(chi, chi_y, epsilon_y, Eh, E, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy) {
-
-    // 根据Excel中I列的复杂公式计算弯矩
-    let moment;
-
-    if (chi < chi_y) {
-        // 弹性阶段
-        moment = (chi / chi_y) * (lf * tf * tf * fy * epsilon_y / 6);
-    } else if (chi < 2 * epsilon_h / tf) {
-        // 屈服阶段
-        moment = (chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2))) * (lf * tf * tf * fy * epsilon_y / 6);
-    } else if (chi < 2 * epsilon_m / tf) {
-        // 强化阶段
-        const term1 = chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2));
-        const term2 = 0.5 * Eh / E * (chi / chi_y - (2 * epsilon_h / tf) / chi_y);
-        const term3 = (1 - (2 * epsilon_h / tf) / chi) * (2 + (2 * epsilon_h / tf) / chi);
-        moment = (term1 + term2 * term3) * (lf * tf * tf * fy * epsilon_y / 6);
-    } else {
-        // 颈缩阶段
-        const term1 = chi / chi_y + 0.5 * (3 - 2 * chi / chi_y - Math.pow(chi_y / chi, 2));
-        const term2 = 0.5 * Eh / E * (chi / chi_y - (2 * epsilon_h / tf) / chi_y);
-        const term3 = (1 - (2 * epsilon_h / tf) / chi) * (2 + (2 * epsilon_h / tf) / chi);
-        const term4 = 0.5 * (Eh - Enk) / E * (chi / chi_y - (2 * epsilon_m / tf) / chi_y);
-        const term5 = (1 - (2 * epsilon_m / tf) / chi) * (2 + (2 * epsilon_m / tf) / chi);
-        moment = (term1 + term2 * term3 - term4 * term5) * (lf * tf * tf * fy * epsilon_y / 6);
-    }
-
-    // 应用率强化效应 - 根据Excel中的公式
-    const strainRate = 0.001; // 假设的应变率
-    const rateEffect = Math.pow(strainRate, 1/p_flange);
-    moment *= (1 + D_flange * rateEffect);
-
-    return moment;
-}
 
 
+// 位移相容系数k49 , k50
 // 从基础输入参数开始计算K49和K50
 function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val, epsilon_u, D_flange, p_flange,  boltDiameter, boltLength) {
     // 从基础输入参数开始计算K49和K50
     function calculateK49K50FromInput(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, boltLength) {
 
+        const D2 = m;
+
         // 第一步：计算基本几何参数
         const D4 = n / m;  // λ = n/m
+
+        const D5 = tf;
+        const D6 = lf;
+        const D14 = E;
+
+        const D18 = p_flange; // 翼缘率强化指数 (p)
+        const D17 = D_flange;  // 翼缘率强化指数 (D)
+
+        const J39 = 0;
+        const J43 = 2 * 0.1 * D2
 
         // 第二步：计算关键弯矩值
         const epsilon_y = fy / E;
 
         // console.log("epsilon_y", epsilon_y)
         // const My = lf * tf * tf * fy * epsilon_y / 6;  // 屈服弯矩
-        const My = lf * tf * tf * fy  / 6;  // 屈服弯矩
+        // const My = lf * tf * tf * fy  / 6;  // 屈服弯矩
+        const My = allMoments.My;
 
         // console.log("屈服弯矩", My)
 
         // 计算峰值弯矩 (简化)
-        const epsilon_m = epsilon_m_val; // 0.137;
-        const chi_m = 2 * epsilon_m / tf;
-        const Mm = calculateMoment(chi_m, 2*epsilon_y/tf, epsilon_y, Eh, E, Enk, epsilon_h_val, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
-        console.log("计算峰值弯矩", Mm)
+        // const epsilon_m = epsilon_m_val; // 0.137;
+        // const chi_m = 2 * epsilon_m / tf;
+        // const Mm = calculateMoment(chi_m, 2*epsilon_y/tf, epsilon_y, Eh, E, Enk, epsilon_h_val, epsilon_m, epsilon_u, D_flange, p_flange, tf, lf, fy);
+        const Mm = allMoments.Mm;
+        // console.log("计算峰值弯矩", Mm)
+
+
+        // 断裂弯矩
+        const Mu = allMoments.Mu;
+
 
         // 第三步：计算螺栓相关参数
         const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
@@ -298,66 +296,110 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
         const Bu = boltArea * boltTensileStrength; // 螺栓峰值荷载, BU(D45) = =D35^2*PI()/4*C63
 
         // 第四步：计算J系列参数
-        const Mp = 1.5 * My;  // 塑性弯矩 (简化)
+        // const Mp = 1.5 * My;  // 塑性弯矩 (简化)
+        const Mp =  allMoments.Mp;  // 塑性弯矩
 
-        // J40 - 需要根据Excel确定，这里假设一个值
+        // J40 - 需要根据Excel确定，这里假设一个值, =1+(J39/D36/D38)^(1/D39)
         const J40 = 1.0;
 
-        // J46 = ξ = Mp/Mu，这里用Mm代替Mu
-        const J46 = Mp / Mm;
+
+
+        // J46 --- ξ;
+        // J47 --- β;
+        // J48 --- β1;
+        // J49 --- β2;
+
+        // const J46 = Mp / Mm; // 这里用Mm代替Mu
+        // J46: ξ = Mp/Mu，
+        const J46 = Mp / Mu;
 
         // J42 = DM (弯矩放大系数) - 需要计算
-        const J42 = calculateDM(fy, E, Eh, D4);
+        const J42 = calculateDM(m, tf, D_flange, p_flange);
 
         // J47 = β = 2Mp/(m*Bu)
         const J47 = 2 * Mp / (m * Bu);
 
         // J48, J49 - 失效模式阈值
+        // J48 --- β1; J49 --- β2;
         const J48 = calculateJ48(J46, J42, D4);
         const J49 = calculateJ49Threshold(J40, J46, J42, D4);
 
         // 第五步：计算失效模式J50
         const J50 = calculateJ50(J47, J48, J49, J40);
 
-        // 第六步：计算N49 - 需要根据Excel确定
-        const N49 = 0.6; // 假设值
+        //  计算失效模式过渡系数
+        const J51 = calculateJ51(J47, D4, J46, J42, J40);
 
-        // 第七步：计算D42 - 相关变形参数
-        const D42 = calculateD42(m, tf, boltDiameter);
 
         // 第八步：最终计算K49和K50
         const K49 = calculateK49(J47, J48, J49);
-        const K50 = calculateK50(J50, J47, J48, J49, N49, m, tf, D42);
+        // const K50 = calculateK50(J50, J47, J48, J49, N49, m, tf, D42);
+        const K50 = calculateK50(J47, J40);
+
+        // 螺栓刚度：(螺栓材料的强度)
+        const J53 = calculateJ53(D14, D6, D5, D2);
+
+        // 翼缘速率 mm/s
+        const J54 = calculateJ54(J39, J47, J49, K49, D4);
+
+        // 翼缘边缘应变率
+        const J57 = calculateJ57(J54, D5, J43, D2);
+
+        // 率强化修正系数
+        const J58 = calculateJ58(D18, J57, D17);
+
+
+
+
 
         return {
             K49: K49,
             K50: K50,
             intermediateValues: {
                 D4: D4,
+                J42: J42,
+                J46: J46,
                 J47: J47,
                 J48: J48,
                 J49: J49,
                 J50: J50,
-                J46: J46,
-                J42: J42
+                J51: J51,
+                J53: J53,
+                J58:J58,
+
+
             }
         };
     }
 
 // 辅助函数实现
 
-    function calculateDM(fy, E, Eh, D4) {
+    function calculateDM(m, tf, D_flange, p_flange) {
+
+        const D2 = m;
+        const D5 = tf;
+        const J43 = 2 * 0.1 * D2;
+        const J39 = 0;
+
+        const J41 = J39/2 * D5 / J43 / D2;
+        const D17 = D_flange;
+
         // 弯矩放大系数计算
-        const strainRate = 0.001;
-        const D18 = 0.1; // 率强化指数 (假设)
+        // let strainRate = 0.001;
+        const strainRate = J41 / D17;
+        // const D18 = 0.1; // 率强化指数 (假设)
+        const D18 = p_flange; // 翼缘率强化指数 (p)
         return 1 + 2 * D18 / (1 + 2 * D18) * Math.pow(strainRate, 1/D18);
     }
 
+    // J48 --- β1;
     function calculateJ48(J46, J42, D4) {
         // J48阈值计算
         return 2 * D4 * J46 / ((1 + 2 * D4) * J42);
     }
 
+
+    // = J40*J46 / (J42*J40-J46)  *  (SQRT(1+4*D4*(J42*J40-J46)/J46/(1+2*D4)*J40)-1)
     function calculateJ49Threshold(J40, J46, J42, D4) {
         // J49阈值计算
         const numerator = J40 * J46;
@@ -371,6 +413,8 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
         return Math.min(trendValue, 2 * J40);
     }
 
+    // 计算失效模式J50
+    // =IF(J47-J48>0,IF(J47-J49>0,IF(J47-2*J40>0,"FM3","FM2"),"FM1-BR"),"FM1-FF")
     function calculateJ50(J47, J48, J49, J40) {
         if (J47 - J48 > 0) {
             if (J47 - J49 > 0) {
@@ -387,11 +431,150 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
         }
     }
 
+
+    // 物理意义说明
+    // J51是一个失效模式过渡系数，其计算逻辑：
+    // J47 < 阈值：返回1，表示完全弹性状态
+    // J47 > 2×J40：返回0，表示完全塑性状态
+    // 中间范围：使用复杂分式计算过渡系数，反映几何参数和材料参数的综合影响
+    // 这个系数在变形计算中起到重要的修正作用，确保不同受力状态下的计算准确性。
+    function calculateJ51(J47, D4, J46, J42, J40) {
+        // Excel公式:
+        // =IF(J47<2*D4*J46/(1+2*D4)/J42,1,IF(J47>2*J40,0,D4*(2*J40-J47)/(((1+2*D4)/J46*J40*J42-D4)*J47)))
+
+        // 计算第一个条件阈值
+        const threshold1 = (2 * D4 * J46) / ((1 + 2 * D4) * J42);
+
+        if (J47 < threshold1) {
+            return 1;
+        } else if (J47 > 2 * J40) {
+            return 0;
+        } else {
+            // 计算复杂的分式
+            const numerator = D4 * (2 * J40 - J47);
+            const denominatorTerm1 = ((1 + 2 * D4) / J46) * J40 * J42;
+            const denominator = (denominatorTerm1 - D4) * J47;
+
+            // 避免除零错误
+            if (Math.abs(denominator) < 1e-10) {
+                return 0.5; // 返回中间值作为默认
+            }
+
+            return numerator / denominator;
+        }
+    }
+
+
+    // 根据Excel上下文，这个公式计算的是螺栓刚度：(螺栓材料的强度)
+    // D14：屈服强度 fy (MPa)
+    // D6：有效宽度 lf (mm)
+    // D5：翼缘厚度 tf (mm)
+    // D2：螺栓到翼缘边缘距离 m (mm)
+    function calculateJ53(D14, D6, D5, D2) {
+        // Excel公式: =0.85*D14*D6*D5^3/D2^3
+
+        // 避免除零错误
+        if (D2 === 0) {
+            return 0; // 如果D2为0，返回0
+        }
+
+        // 直接计算
+        return 0.85 * D14 * D6 * Math.pow(D5, 3) / Math.pow(D2, 3);
+    }
+
+
+
+    // 根据Excel上下文，这个公式计算的是转动速度： (翼缘速率 mm/s)
+    // J39：加载速率 v (mm/s)
+    // J47：β值 = 2Mp/(m×Bu)
+    // J49：失效模式阈值
+    // K49：失效模式过渡系数
+    // D4：几何参数 λ = n/m
+    function calculateJ54(J39, J47, J49, K49, D4) {
+        // Excel公式: =J39/2*IF(J47>J49,K49/(1+D4),1-D4*K49/(1+D4))
+
+        // 第一部分: J39/2
+        const baseTerm = J39 / 2;
+
+        // 条件判断部分
+        let conditionTerm;
+        if (J47 > J49) {
+            // J47 > J49 的情况: K49/(1+D4)
+            conditionTerm = K49 / (1 + D4);
+        } else {
+            // J47 <= J49 的情况: 1 - D4*K49/(1+D4)
+            conditionTerm = 1 - (D4 * K49) / (1 + D4);
+        }
+
+        // 最终结果
+        return baseTerm * conditionTerm;
+    }
+
+
+
+    // 根据Excel中的上下文，这个公式计算的是翼缘边缘应变率：
+    // J54：转动速度 θ· (rad/s)
+    // D5：翼缘厚度 tf (mm)
+    // J43：塑性铰长度 2lp (mm)
+    // D2：螺栓到翼缘边缘距离 m (mm)
+    function calculateJ57(J54, D5, J43, D2) {
+        // Excel公式: =J54*D5/J43/D2
+
+        // 避免除零错误
+        if (J43 === 0 || D2 === 0) {
+            return 0; // 如果分母为0，返回0
+        }
+
+        // 直接计算
+        return (J54 * D5) / (J43 * D2);
+    }
+
+
+    // J58是一个率强化修正系数，其物理意义：
+    // D18：率强化指数参数
+    // J57：当前应变率或相关速率参数
+    // D17：参考应变率或基准速率参数
+    function calculateJ58(D18, J57, D17) {
+        // Excel公式: =1+2*D18/(1+2*D18)*(J57/D17)^(1/D18)
+
+        // 避免除零错误
+        if (D18 === 0) {
+            return 1; // 如果D18为0，返回基准值1
+        }
+
+        if (D17 === 0) {
+            return 1; // 如果D17为0，避免除零错误
+        }
+
+        // 计算第一部分系数
+        const coefficient = (2 * D18) / (1 + 2 * D18);
+
+        // 计算幂的底数
+        const base = J57 / D17;
+
+        // 避免负数的分数次幂
+        if (base < 0 && 1/D18 % 2 === 0) {
+            return 1; // 如果底数为负且指数分母为偶数，返回基准值
+        }
+
+        // 计算幂
+        const powerTerm = Math.pow(Math.abs(base), 1 / D18);
+
+        // 如果底数为负且指数分母为奇数，处理符号
+        let signedPowerTerm = base < 0 ? -powerTerm : powerTerm;
+
+        // 最终计算
+        return 1 + coefficient * signedPowerTerm;
+    }
+
+
+
     function calculateD42(m, tf, boltDiameter) {
         // D42变形参数计算
         return 0.1 * m + 0.5 * tf + 0.2 * boltDiameter;
     }
 
+    // =IF(J47>J49,0,IF(J47<J48,1,(J49-J47)/(J49-J48)))
     function calculateK49(J47, J48, J49) {
         if (J47 > J49) {
             return 0;
@@ -402,38 +585,36 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
         }
     }
 
-    function calculateK50(J50, J47, J48, J49, N49, D2, D5, D42) {
-        if (J50 === "FM1-BR") {
-            const exponentBase = 0.33 * Math.pow(D2, 2) / (2 * D5 * D42);
-            const exponent = 6 * Math.pow(exponentBase, 1.5);
-            const ratio = (J47 - J48) / (J49 - J48);
 
-            return N49 + (1 - N49) * Math.pow(ratio, exponent);
+    // =IF(J47>2*J40,0,IF(J47>1.63,(2-J47)/(2-1.63),1))
+    // function calculateK50(J50, J47, J48, J49, N49, D2, D5, D42) {
+    //     if (J50 === "FM1-BR") {
+    //         const exponentBase = 0.33 * Math.pow(D2, 2) / (2 * D5 * D42);
+    //         const exponent = 6 * Math.pow(exponentBase, 1.5);
+    //         const ratio = (J47 - J48) / (J49 - J48);
+    //
+    //         return N49 + (1 - N49) * Math.pow(ratio, exponent);
+    //     } else {
+    //         return "--";
+    //     }
+    // }
+    // K50单元格的计算方法
+    function calculateK50(J47, J40) {
+        // Excel公式: =IF(J47>2*J40,0,IF(J47>1.63,(2-J47)/(2-1.63),1))
+        // J47 = β值 = 2Mp/(m*Bu)
+        // J40 = 阈值参数
+
+        if (J47 > 2 * J40) {
+            return 0;
+        } else if (J47 > 1.63) {
+            return (2 - J47) / (2 - 1.63);
         } else {
-            return "--";
+            return 1;
         }
     }
 
     return calculateK49K50FromInput(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, boltLength);
 
-// 使用示例
-//     const result = calculateK49K50FromInput(
-//         40,  // m (mm)
-//         40,  // n (mm)
-//         6,   // tf (mm)
-//         80,  // lf (mm)
-//         410, // fy (MPa)
-//         210000, // E (MPa)
-//         2700,   // Eh (MPa)
-//         150,    // Enk (MPa)
-//         6.82725, // boltDiameter (mm)
-//         20.5     // boltLength (mm)
-//     );
-//
-//     console.log("最终结果:");
-//     console.log("K49:", result.K49);
-//     console.log("K50:", result.K50);
-//     console.log("中间参数:", result.intermediateValues);
 }
 
 
@@ -443,38 +624,83 @@ function calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_
 // 计算变形Δ = 2*S + T
 // 完整的calculateDelta函数实现
 function calculateDelta(chi, moment, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h_val, epsilon_m_val,epsilon_u, D_flange, p_flange,  boltDiameter, boltLength) {
+
+
+    // 计算 S
+    // const K49 = 0.5; // 根据Excel中的值或计算
+    // const K50 = 0.8; // 根据Excel中的值或计算
+    k49k50Params = calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val, epsilon_u, D_flange, p_flange,  boltDiameter, boltLength);
+    const {K49, K50} = k49k50Params;
+
+    console.log('k49k50Params', k49k50Params)
+
     // 计算角度 θ (Kn)
     const theta = calculateTheta(chi, moment, m, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val);
 
     // 计算 R (Rn) - 翼缘弯矩 F
     const R = calculateR(moment, m, theta);
 
-    // 计算 S
-    // const K49 = 0.5; // 根据Excel中的值或计算
-    // const K50 = 0.8; // 根据Excel中的值或计算
 
 
-    const {K49, K50} = calculateK49K50(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val, epsilon_u, D_flange, p_flange,  boltDiameter, boltLength);
 
-    console.log(K49, K50)
+    // x轴： 2Δ1+Δ2
+    // S: Δ1    ;     T:  Δ2
 
-    const D2 = m;
-    const D4 = n;
-    const J53 = boltStiffness;
-
-    const S = K49 * Math.sin(theta) * D2 + (K50 - K49) * theta / D4 / 2 + R / J53;
 
     // 计算 T - 使用TREND函数逻辑
+    // R(列) 为受力 F
     const T = calculateT(R);
 
-    return 2 * S + T;
+    const D2 = m;
+
+    // λ: = n/m
+    const D4 = n/m;
+
+    // 螺栓刚度：(螺栓材料的强度)
+    // const J53 = boltStiffness;
+    const J53 = k49k50Params.intermediateValues.J53;
+
+
+    // S5=$K$49*SIN(K5)*$D$2+($K$50-$K$49)*T5/$D$4/2+R5/$J$53
+    // const S = K49 * Math.sin(theta) * D2 + (K50 - K49) * theta / D4 / 2 + R / J53;
+    const S = K49 * Math.sin(theta) * D2 + (K50 - K49) * T / D4 / 2 + R / J53;
+
+    const U = 2 * S + T;
+
+    // console.log("moment, theta, R(F) ", moment,  theta, R )
+    console.log(`
+        moment: ${moment},  
+        theta: ${theta},  
+        
+        K49: ${K49},  
+        K50: ${K50},  
+        
+        D2: ${D2},  
+        D4: ${D4},  
+        J53: ${J53},  
+        
+        R(F): ${R},  
+        
+        
+        S: ${S},  
+        T: ${T},  
+        2Δ1+Δ2: ${U},  
+    `);
+
+    return U;
 }
 
 // 完整的calculateTheta函数
 function calculateTheta(chi, moment, m, tf, lf, fy, E, Eh, Enk, epsilon_h_val, epsilon_m_val) {
-    const J51 = 0.3; // 泊松比或相关参数
-    const D27 = lf * tf * tf * fy * (fy/E) / 6; // My
-    const J58 = 1.0; // 材料参数
+    // const J51 = 0.3; // 泊松比或相关参数
+    const J51 = k49k50Params.intermediateValues.J51;
+
+    // const D27 = lf * tf * tf * fy * (fy/E) / 6; // My
+    // 屈服弯矩
+    const D27 = allMoments.My
+
+    const J58 = k49k50Params.intermediateValues.J58; // 率强化修正系数
+
     const D21 = 2 * (fy/E) / tf; // χy
     const D22 = 2 * epsilon_h_val / tf; // χh
     const D23 = 2 * epsilon_m_val / tf; // χm
@@ -483,6 +709,8 @@ function calculateTheta(chi, moment, m, tf, lf, fy, E, Eh, Enk, epsilon_h_val, e
     const I = moment;
     const J = calculateJ(H, D21, D22, D23, fy, E, Eh, Enk, tf);
 
+    // console.log('moment, J column, H',moment, J, H)
+
     const theta = m / (1 + J51) * (H - D27/I * J58 * J - 0.5 * D21 * I / J58 / D27);
 
     return theta;
@@ -490,9 +718,13 @@ function calculateTheta(chi, moment, m, tf, lf, fy, E, Eh, Enk, epsilon_h_val, e
 
 // 完整的calculateJ函数
 function calculateJ(H, D21, D22, D23, fy, E, Eh, Enk, tf) {
-    const D14 = fy/E; // εy
+    // const D14 = fy/E; // εy
+    const D14 = E; // 弹性模量
     const D15 = Eh;   // 强化模量
     const D16 = Enk;  // 颈缩强化模量
+
+
+    // console.log('H,  D21, D22, D23, D14, D15, D16', H, D21, D22, D23, E,  Eh, Enk);
 
     let term1 = Math.pow(H, 3) / H / D21 / 2;
     let term2 = Math.pow(H - D21, 3) / H / D21 / 2 * (H > D21 ? 1 : 0);
@@ -504,13 +736,13 @@ function calculateJ(H, D21, D22, D23, fy, E, Eh, Enk, tf) {
 
 // 计算 R (翼缘弯矩 F)
 function calculateR(moment, m, theta) {
-    const J51 = 0.3;
+    const J51 = k49k50Params.intermediateValues.J51;
     return 2 * moment * (1 + J51) / m / Math.cos(theta);
 }
 
 // 计算 T - 实现TREND函数逻辑
-// Ma: 为弯矩值， 参考插值表的值，用trend（excel函数）插值算法根据Ma（弯矩的值）得到 T（Δ2）的值
-function calculateT(Ma) {
+// R(F): 为受力（R列的值）， 参考插值表的值，用trend（excel函数）插值算法根据Ma（弯矩的值）得到 T（Δ2）的值
+function calculateT(R) {
     // 插值算法，示例1：简单线性回归（最小二乘法）
     // const tableYs = [100, 120, 150, 180, 200];
     // const tableYs = [1, 2, 3, 4, 5];
@@ -555,17 +787,26 @@ function calculateT(Ma) {
 
 
     // 参考表, 假设的参考数据点 (基于Excel中的U21:V24)， 按 x 值从小到大排列
+    // const referencePoints = [
+    //     { x: 0, y: 0 },   // U21, V21
+    //     { x: 32686, y: 0.07 },   // U22, V22
+    //     { x: 37715, y: 3.95 },   // U24, V24
+    //     { x: 46767, y: 1.30 },   // U23, V23
+    // ];
+
+    // excel表U20 - V22
     const referencePoints = [
+        { x: 0, y: 0 },   // U20, V20
         { x: 0, y: 0 },   // U21, V21
         { x: 32686, y: 0.07 },   // U22, V22
-        { x: 37715, y: 3.95 },   // U24, V24
-        { x: 46767, y: 1.30 },   // U23, V23
+        // { x: 37715, y: 3.95 },   // U24, V24
+        // { x: 46767, y: 1.30 },   // U23, V23
     ];
 
 
     const tableXs = [];
     const tableYs = [];
-    const inputXs = [Ma];
+    const inputXs = [R];
     referencePoints.map(p => {
         tableXs.push(p.x);
         tableYs.push(p.y);
@@ -579,57 +820,6 @@ function calculateT(Ma) {
     }
     return T;
 }
-
-// 计算 T - 实现TREND函数逻辑
-function calculateT_BAK(R) {
-    // 假设的参考数据点 (基于Excel中的U20:V22)
-    const referencePoints = [
-        // { x: 1000, y: 0.1 },   // U20, V20
-        // { x: 5000, y: 0.5 },   // U21, V21
-        // { x: 10000, y: 1.0 }   // U22, V22
-        { x: 0, y: 0 },   // U20, V20
-        { x: 0, y: 0 },   // U21, V21
-        { x: 32686, y: 0.07 }   // U22, V22
-    ];
-
-    // 找到R所在的区间
-    let lowerIndex = 0;
-    let upperIndex = referencePoints.length - 1;
-
-    for (let i = 0; i < referencePoints.length - 1; i++) {
-        if (R >= referencePoints[i].x && R <= referencePoints[i + 1].x) {
-            lowerIndex = i;
-            upperIndex = i + 1;
-            break;
-        }
-    }
-
-    // 如果R超出范围，使用边界值
-    if (R < referencePoints[0].x) {
-        return referencePoints[0].y;
-    }
-    if (R > referencePoints[referencePoints.length - 1].x) {
-        return referencePoints[referencePoints.length - 1].y;
-    }
-
-    // 线性插值
-    const x1 = referencePoints[lowerIndex].x;
-    const y1 = referencePoints[lowerIndex].y;
-    const x2 = referencePoints[upperIndex].x;
-    const y2 = referencePoints[upperIndex].y;
-
-    if (x1 === x2) return y1;
-
-    return y1 + (R - x1) * (y2 - y1) / (x2 - x1);
-}
-
-// 计算荷载F = 2*I*(1+J51)/m/COS(K)
-// 计算荷载F
-function calculateForce0(moment, m, chi) {
-    const J51 = 0.3;
-    return 2 * moment * (1 + J51) / m / Math.cos(chi * m / 2);
-}
-
 
 
 // 计算荷载F - 改为千牛
@@ -687,11 +877,6 @@ function calculateSpecialDelta1(m, n, tf, By) {
     return 0.5; // 简化值
 }
 
-function calculateSpecialForce1_0(m, n, tf, By) {
-    // 根据Excel中D44的计算公式
-    return By * 0.8; // 简化值
-}
-
 // 在calculateSpecialForce函数中也做同样的修改
 function calculateSpecialForce1(m, n, tf, By) {
     // 根据Excel中D44的计算公式，单位改为千牛
@@ -721,45 +906,8 @@ function calculateSpecialForce3(m, n, tf, Bf) {
 }
 
 // 第三步：计算失效模式
-function calculateFailureMode(m, n, tf, lf, fy, E, Eh, Enk, boltDiameter, boltLength, boltHeadDiameter, washerDiameter, D_bolt, p_bolt, D_flange, p_flange) {
-    // 计算关键参数
-    const lambda = n / m;
-
-    // 计算屈服弯矩
-    const epsilon_y = fy / E;
-    const My = lf * tf * tf * fy * epsilon_y / 6;
-
-    // 计算峰值弯矩
-    const epsilon_m_val = 0.137;
-    const chi_m = 2 * epsilon_m_val / tf;
-    const Mm = calculateMoment(chi_m, 2*epsilon_y/tf, epsilon_y, Eh, E, Enk, 0.015263, epsilon_m_val, 1, D_flange, p_flange);
-
-    // 计算螺栓峰值荷载
-    const boltArea = Math.PI * boltDiameter * boltDiameter / 4;
-    const boltTensileStrength = 800;
-    const Bu = boltArea * boltTensileStrength;
-
-    // 计算塑性弯矩
-    const Mp = 1.5 * My; // 简化计算
-
-    // 计算关键比值 - 根据Excel J50单元格的逻辑
-    const xi = Mp / Mm;
-    const beta = 2 * Mp / (m * Bu);
-
-    // 根据Excel J50单元格的公式判断失效模式
-    let failureMode;
-
-    // 这里需要根据Excel中完整的J50公式实现
-    if (beta < 0.5) {
-        failureMode = "FM1-FF (翼缘弯曲失效)";
-    } else if (beta < 1.0) {
-        failureMode = "FM1-BR (翼缘弯曲+螺栓拉伸)";
-    } else if (beta < 1.63) {
-        failureMode = "FM2 (螺栓拉伸失效)";
-    } else {
-        failureMode = "FM3 (螺栓断裂失效)";
-    }
-
+function calculateFailureMode() {
+    const failureMode = k49k50Params.intermediateValues.J50 || 'FM1-FF';
     return failureMode;
 }
 
