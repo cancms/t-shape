@@ -115,24 +115,47 @@ function calculateKeyPoints(m, n, tf, lf, fy, E, Eh, Enk, epsilon_h, epsilon_m, 
     const boltStiffness = 0; // 用单元格J53的值
 
     // 计算对应的变形Δ = 2*S + T
-    const delta_y = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
-    const delta_h = calculateDelta(chi_h, Mh, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
-    const delta_m = calculateDelta(chi_m, Mm, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
-    const delta_u = calculateDelta(chi_u, Mu, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    // const delta_y = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    // const delta_h = calculateDelta(chi_h, Mh, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    // const delta_m = calculateDelta(chi_m, Mm, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    // const delta_u = calculateDelta(chi_u, Mu, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+
+    const the4KeyPoints = [];
+    let thePoint = {};
+
+
+
+
+    // My, 屈服弯矩点， 屈服点，   / 1000 ， 用千牛作为纵坐标的单位
+    thePoint = calculateDelta(chi_y, My, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "屈服点" });
+
+    // Mh, 屈服弯矩点， 强化点
+    thePoint = calculateDelta(chi_h, Mh, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "强化点" });
+
+    // Mm, 峰值弯矩点， 峰值点
+    thePoint = calculateDelta(chi_m, Mm, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "峰值点" });
+
+    // Mu, 断裂弯矩点， 断裂点
+    thePoint = calculateDelta(chi_u, Mu, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk, epsilon_h, epsilon_m, epsilon_u, D_flange, p_flange, boltDiameter, boltLength);
+    the4KeyPoints.push({ x: thePoint.U, y: thePoint.R  / 1000, name: "断裂点" });
 
     // 计算对应的荷载F = 2*I*(1+J51)/m/COS(K)
-    const F_y = calculateForce(My, m, chi_y);
-    const F_h = calculateForce(Mh, m, chi_h);
-    const F_m = calculateForce(Mm, m, chi_m);
-    const F_u = calculateForce(Mu, m, chi_u);
+    // const F_y = calculateForce(My, m, chi_y);
+    // const F_h = calculateForce(Mh, m, chi_h);
+    // const F_m = calculateForce(Mm, m, chi_m);
+    // const F_u = calculateForce(Mu, m, chi_u);
 
     // 返回四个关键点
-    return [
-        { x: delta_y, y: F_y, name: "屈服点" },
-        { x: delta_h, y: F_h, name: "强化点" },
-        { x: delta_m, y: F_m, name: "峰值点" },
-        { x: delta_u, y: F_u, name: "断裂点" }
-    ];
+    return the4KeyPoints;
+    // return [
+    //     { x: delta_y, y: F_y, name: "屈服点" },
+    //     { x: delta_h, y: F_h, name: "强化点" },
+    //     { x: delta_m, y: F_m, name: "峰值点" },
+    //     { x: delta_u, y: F_u, name: "断裂点" }
+    // ];
 }
 
 
@@ -687,7 +710,8 @@ function calculateDelta(chi, moment, m, n, tf, lf, fy, E, boltStiffness, Eh, Enk
         2Δ1+Δ2: ${U},  
     `);
 
-    return U;
+    return {U, R};
+    // return U;
 }
 
 // 完整的calculateTheta函数
